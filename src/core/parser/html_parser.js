@@ -1,52 +1,74 @@
-function parser(template, options) {
-  const tagStartReg = /^<([a-z]+)\s*([^>/]*)\/?>/;
-  const tagEndReg = /^<\/([a-z0-9]+)\s*>/
-  const tagStart = /<([a-z]+)\s*([^>/]*)\/?>/;
-  const tagEnd = /<\/([a-z0-9]+)\s*>/
-  let match;
-  let domsQuene = [];
-  let elementQuene = [];
-  while (template) {
+function parser(html, options) {
+  var tagStartReg = /^<([a-z]+)\s*([^>/]*)\/?>/;
+  var  tagEndReg = /^<\/([a-z0-9]+)\s*>/
+  var  tagStart = /<([a-z]+)\s*([^>/]*)\/?>/;
+  var  tagEnd = /<\/([a-z0-9]+)\s*>/
+  var commentReg = /^<!\-\-.*\-\->/
+  var doctypeReg = /^<!Doctype [^>]+>/i
+  var attrs = /\s*([\w\:\@]+)\s*=\s*["|'](.*)["|']\s*/
+  var match;
+  var domsQuene = [];
+  var elementQuene = [];
+  while (html) {
     // 刚好匹配上起始标签
-    if (match = tagStartReg.exec(template)) {
-      template = template.substring(match[0].length);
-      let domObj = {
-        tag: match[1],
-        type: 'element',
-        datas: match[2],
-        children: []
+    var textEnd = template.indexOf('<');
+    if (textEnd == 0) {
+      // 要考虑异常， 比如<!-- 条件注释  <!Doctype 文档说明
+      if (commentReg.test(html)) {
+        var commentEndIndex = html.indexOf('-->')
+        html = html.substring(commentEndIndex+3);
+        continue
       }
-      elementQuene.push(domObj)
-      if (domsQuene.length) {
-        domsQuene[domsQuene.length - 1].children.push(domObj);
+      // 剔除掉文档节点
+      var doctypeMatch = html.match(doctypeReg)
+      if (doctypeMatch) {
+        html = html.substring(doctypeMatch[0].length);
+        continue
       }
-      domsQuene.push(domObj)
-      continue;
-    }
-    // 刚好匹配上结束标签
-    if (match = tagEndReg.exec(template)) {
-      if (domsQuene[domsQuene.length - 1].tag == match[1]) {
-        domsQuene.splice(domsQuene.length - 1, 1)
+      var startMatch = html.match(tagStartReg);
+      if (startMatch) {
+        // 解析开始标签
+        continue
       }
-      template = template.substring(match[0].length);
-      continue;
+      var endMatch = html.match(tagEndReg);
+      if (endMatch) {
+        // 解析结束标签
+        continue
+      }
+
     }
-    // 中间还有内容部分， 这个部分即不是起始标签， 也不是结束标签， 那就是文本标签喽, 文本也算是dom的一种类型，和元素标签一样挂在父节点的children里面就行了
-    var match1 = tagStart.exec(template);
-    var match2 = tagEnd.exec(template);
-    var match1index = match1 ? match1.index : template.length;
-    var match2index = match2 ? match2.index : 0;
-    var textEndindex = 0 || Math.min(match1index, match2index);
-    var textObj = {
-      type: 'text',
-      data: textEndindex > 0 ? template.substring(0, textEndindex) : template.substring(0)
+    else if (textEnd >= 0) {
+      var rest, next;
+      rest = html.substring(textEnd);
+      while (!tagStartReg.test(rest) &&
+          !tagEndReg.test(rest) &&
+          !commentReg.test(rest) &&
+          !doctypeReg.test(rest)) {
+        next = rest.indexOf('<', 1)
+        if (next < -1) {
+          // 说明< 后面的都是text了
+          textEnd = html.length;
+          break
+        }
+        textEnd = textEnd + next;
+        rest = rest.substring(next)
+      }
+      text = html.substring(0, textEnd);
+      html = html.substring(textEnd);
+      continue
     }
-    if (domsQuene.length) {
-      domsQuene[domsQuene.length - 1].children.push(textObj);
+    else if (textEnd < 0) {
+      // <都没找到， 那百分百不是标签了， 后面的都是纯文本
+      text = html;
+      html = ''
     }
-    template = textEndindex > 0 ? template.substring(textEndindex) : ''
+
   }
   return elementQuene
+}
+function parseStartTag(startMatch) {
+  var tagName = startMatch[1] || ''
+  var datas = startMatch[2] || ''
 }
 
 
