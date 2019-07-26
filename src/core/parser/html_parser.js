@@ -7,7 +7,7 @@ function parser(html, options) {
   var doctypeReg = /^<!Doctype [^>]+>/i
   var attrs = /\s*([\w\:\@]+)\s*=\s*["|'](.*)["|']\s*/
   var match;
-  var domsQuene = [];
+  var stack = [];
   var elementQuene = [];
   while (html) {
     // 刚好匹配上起始标签
