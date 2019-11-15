@@ -11,9 +11,10 @@
 </body>
 <script src="../core/parser/html_parser.js"></script>
 <script>
-  var doms = parser('<div id="container" class="container"><p>hello world</p><footer><ul><li>列表项1</li><li>列表项2</li></ul></footer></div>');
-  console.log(doms[0])
-  console.log(formatRealDom(doms[0]));
+  var doms =
+    parse('<div>Jimmy. how old are you?</div>what are you saying<div id="container" class="container" v-if="show"><p>hello world {{myCountry}}</p><footer><ul><li>列表项1</li><li>列表项2</li></ul></footer></div>');
+  console.log(doms)
+  // console.log(formatRealDom(doms[0]));
   // 根据parser出来的结构，组装成真实的dom树
   function formatRealDom(tree) {
     var type = tree.type;

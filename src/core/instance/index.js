@@ -9,10 +9,19 @@ function Vue(options) {
     }
     this._init(options)
 }
-Vue.prototype = {
-    init: function (options) {
-        // 进行vue的初始化
-    }
-}
+
 initMixin(Vue)
-export default Vue
+
+
+function oberve(obj, key, orignalObj) {
+  Object.defineProperty(obj, key, {
+    get () {
+      return orignalObj[key];
+    },
+    set: function (newVal) {
+      if (newVal != orignalObj[key]) {
+        orignalObj[key] = newVal
+      }
+    }
+  })
+}
