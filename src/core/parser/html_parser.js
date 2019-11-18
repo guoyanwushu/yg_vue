@@ -78,24 +78,29 @@ function parse(html, options) {
    * 属性, 事件
    * v-bind: v-model @ v-on
    * @param startMatch
+   * {
+   *  0: '<div id="hello" :name="cname"',
+   *  1: 'div',
+   *  2: ' :cname="name"'
+   * }
    */
   function parseStartTag(startMatch) {
     var tagName = startMatch[1] || ''
     var datas = startMatch[2] || '';
-    var attrs = [], attr
+    var attrs = [], attr;
+    var attrReg = /^(?:v-bind|:)([a-zA-Z]+)/
+    var eventReg = /^(?:v-on|@)([a-zA-Z\.]+)/
     while (attr = datas.match(attrsReg)) {
-      var attrReg = /^(?:v-bind|:)([a-zA-Z]+)/
-      var eventReg = /^(?:v-on|@)([a-zA-Z\.]+)/
       var _attr
       var _event
-      if (_attr = attrs.exec(attr[1])) {
+      if (_attr = attrReg.exec(attr[1])) {
         attrs.push({
           bindAttr: true,
           name: _attr[1],
           value: attr[2] || attr[3]
         })
       }
-      else if (_event = attr.exec(attr[1])) {
+      else if (_event = eventReg.exec(attr[1])) {
         var eventName = _event[1].split('.')[0]
         var desc = _event[1].split('.').slice(1)
         attrs.push({
@@ -146,28 +151,28 @@ function parse(html, options) {
 /**
  * 渲染函数
  */
-functtion render(vNode, vm, container) {
+function renderFunc(vNode, vm, container) {
   if (vNode.type = 'element') {
     var _el = document.createElement(vNode.tagName);
     var attrs = vNode.attrs;
     attrs.forEach(function (attr, index) {
       if (attr.bindAttr) {
         var _render = 'with(vm){return ${'+attr.value+'}}'
-        _el.setAttribute(attr.name, eval(_render));
-        Dep.target = {
+        _el.setAttribute(attr.name, (new Function(_render))());
+        /*Dep.target = {
           update: function () {
-            _el.setAttribute(attr.name,  eval(_render))
+            _el.setAttribute(attr.name, new Function(_render)())
           }
-        }
+        }*/
         return
       }
       if (attr.bindEvent) {
-        el.addEventListener(attr.name, function (event) {
+        _el.addEventListener(attr.name, function (event) {
           attr.value.call(vm, event)
         })
         return
       }
-      el.setAttribute(attr.name, attr.name);
+      _el.setAttribute(attr.name, attr.name);
     })
     container.appendChild(_el)
     if (vNode.children) {
@@ -177,3 +182,5 @@ functtion render(vNode, vm, container) {
     }
   }
 }
+
+export {parse, renderFunc}

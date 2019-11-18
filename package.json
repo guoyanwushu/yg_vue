@@ -1,0 +1,28 @@
+{
+  "name": "yg_vue",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "dependencies": {
+    "webpack-cli": "^3.3.6",
+    "webpack-dev-server": "^3.9.0",
+    "webpack": "^4.39.1"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/guoyanwushu/yg_vue.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/guoyanwushu/yg_vue/issues"
+  },
+  "homepage": "https://github.com/guoyanwushu/yg_vue#readme"
+}
