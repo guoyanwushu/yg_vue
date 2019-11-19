@@ -1,9 +1,11 @@
+import Dep from '../observe/dep.js'
 function parse(html, options) {
   var tagStartReg = /^<([a-z]+)\s*([^>/]*)\/?>/;
   var tagEndReg = /^<\/([a-z0-9]+)\s*>/
   var commentReg = /^<!--.*-->/
   var doctypeReg = /^<!Doctype [^>]+>/i
   var attrsReg = /\s*([^"'<>=]+)\s*=\s*(?:'([^']*)'|"([^"]*)")\s*/
+  var textReg = /\{\{([^{}]+?)\}\}/
   var root, currentParent;
   var stack = [];
   /**
@@ -88,8 +90,8 @@ function parse(html, options) {
     var tagName = startMatch[1] || ''
     var datas = startMatch[2] || '';
     var attrs = [], attr;
-    var attrReg = /^(?:v-bind|:)([a-zA-Z]+)/
-    var eventReg = /^(?:v-on|@)([a-zA-Z\.]+)/
+    var attrReg = /^(?:v-bind:|:)([a-zA-Z]+)/
+    var eventReg = /^(?:v-on:|@)([a-zA-Z\.]+)/
     while (attr = datas.match(attrsReg)) {
       var _attr
       var _event
@@ -141,7 +143,14 @@ function parse(html, options) {
     html = html.substring(endMatch[0].length)
   }
   function createTextNode(text) {
+    // 再判断一下是否有{{}}这种东西， 如果没有就算传字符串， 就不要去解析了， 如果有的话， 就要把 {{}}里面的内容提取出来， 然后用 ${} 包裹起来进行解析
+    var _, bindFlag = false;
+    while (_ = textReg.exec(text)) {
+      text = text.replace(_[0], '${'+_[1]+'}');
+      bindFlag = true
+    }
     return {
+      bindFlag: bindFlag,
       type: 'text',
       text: text
     }
@@ -151,36 +160,64 @@ function parse(html, options) {
 /**
  * 渲染函数
  */
+function render (vm) {
+  if (vm.$options.template) {
+    const container = document.getElementById(vm.$options.el);
+    const nodes = parse(vm.$options.template);
+    renderFunc(nodes, vm, container)
+  }
+}
 function renderFunc(vNode, vm, container) {
-  if (vNode.type = 'element') {
+  container.innerHTML = ''
+  if (vNode.type == 'element') {
     var _el = document.createElement(vNode.tagName);
     var attrs = vNode.attrs;
     attrs.forEach(function (attr, index) {
       if (attr.bindAttr) {
-        var _render = 'with(vm){return ${'+attr.value+'}}'
-        _el.setAttribute(attr.name, (new Function(_render))());
-        /*Dep.target = {
+        var _render = 'with(this){return '+attr.value+'}'
+        Dep.target = {
           update: function () {
-            _el.setAttribute(attr.name, new Function(_render)())
+            _el.setAttribute(attr.name, new Function(_render).call(vm))
           }
-        }*/
-        return
+        }
+        var _val = new Function(_render).call(vm)
+        _el.setAttribute(attr.name, _val);
+
       }
-      if (attr.bindEvent) {
+      else if (attr.bindEvent) {
         _el.addEventListener(attr.name, function (event) {
           attr.value.call(vm, event)
         })
-        return
       }
-      _el.setAttribute(attr.name, attr.name);
+      else {
+        _el.setAttribute(attr.name, attr.value);
+      }
     })
     container.appendChild(_el)
     if (vNode.children) {
       vNode.children.forEach(function (_node) {
-        render(_node,vm, _el)
+        renderFunc(_node,vm, _el)
       })
     }
   }
+  if (vNode.type == 'text') {
+    var _text;
+    const _textNode = document.createTextNode('');
+    if (vNode.bindFlag) {
+      var _render = 'with(this){return `'+vNode.text+'`}';
+      Dep.target = {
+        update: function () {
+          _textNode.replaceData(0, -1,  new Function(_render).call(vm))
+        }
+      }
+      _text = new Function(_render).call(vm)
+
+    } else {
+      _text = vNode.text
+    }
+    _textNode.appendData(_text);
+    container.appendChild(_textNode);
+  }
 }
 
-export {parse, renderFunc}
+export {parse, renderFunc, render}

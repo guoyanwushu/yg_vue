@@ -6,7 +6,6 @@ module.exports = {
     filename: "boundle.js",
     path: path.resolve(__dirname, 'public')
   },
-  devtool: 'inline-source-map',
   devServer: {
     contentBase: './public'
   }
