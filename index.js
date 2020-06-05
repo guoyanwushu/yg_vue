@@ -5,6 +5,8 @@ const vNodes = parse(_htmlTemp)
 
 console.log(renderFunc(vNodes, {cname: 'Kiddy', name: 'jimmy'}, document.getElementById('test')))*/
 import Vue from './src/core/instance/index'
+import './one.css'
+import './test.css'
 window.vueInst = new Vue({
   el: 'test',
   template: '<div id="container" v-bind:name="cname">hello world, my name is {{name.toUpperCase()}}</div>',

@@ -11,9 +11,8 @@ function initMixin(Vue) {
     // 观察的实际上是 vm._data , 但是在vue的实际应用中, 读和写实际上都是在 vm即当前vue实例上进行的， 所以还要加一层代理，将vm.name 代理到 vm._data.name,代理其实也是用defineProperty 进行代理
     proxy(vm._data, vm);
     observe(vm._data);
-
     // 双向绑定这一块目前看来并不难，所占比例也不大，主要还是怎么生成依赖那一块，这个似乎更为重要一些
-    render(vm)
+    render(vm) // 挂载节点
 
   }
 }

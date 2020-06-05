@@ -1,0 +1,30 @@
+@-webkit-keyframes len {
+    0% {
+        -webkit-transform: rotate(0deg);
+                transform: rotate(0deg);
+    }
+    100% {
+        -webkit-transform: rotate(360deg);
+                transform: rotate(360deg);
+    }
+}
+@keyframes len {
+    0% {
+        -webkit-transform: rotate(0deg);
+                transform: rotate(0deg);
+    }
+    100% {
+        -webkit-transform: rotate(360deg);
+                transform: rotate(360deg);
+    }
+}
+span {
+    color: #ccc;
+    font-size: 16px;
+    display: inline-block;
+    font-family: 'Microsoft YaHei';
+    -webkit-transition: all .1s linear;
+    transition: all .1s linear;
+    -webkit-animation: len 5s linear infinite;
+            animation: len 5s linear infinite;
+}

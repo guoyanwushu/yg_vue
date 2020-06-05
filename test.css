@@ -1,0 +1,8 @@
+span {
+    color: #ccc;
+    font-size: 16px;
+    display: inline-block;
+    font-family: 'Microsoft YaHei';
+    transition: all .1s linear;
+    animation: len 5s linear infinite;
+}

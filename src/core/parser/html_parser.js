@@ -51,7 +51,7 @@ function parse(html, options) {
       !tagEndReg.test(rest) &&
       !commentReg.test(rest) &&
       !doctypeReg.test(rest)) {
-        next = rest.indexOf('<', 1)
+        next = rest.indexOf('<', 1)  // 找下一个<
         if (next < -1) {
           // 说明< 后面的都是text了
           textEnd = html.length;
@@ -87,6 +87,7 @@ function parse(html, options) {
    * }
    */
   function parseStartTag(startMatch) {
+    // 确定是元素节点， 把标签 和 标签后面到>的中间那一截截取出来
     var tagName = startMatch[1] || ''
     var datas = startMatch[2] || '';
     var attrs = [], attr;
@@ -172,9 +173,18 @@ function renderFunc(vNode, vm, container) {
   if (vNode.type == 'element') {
     var _el = document.createElement(vNode.tagName);
     var attrs = vNode.attrs;
+    vNode.el = _el ; // 在vNode里面保留对真实dom的引用
+    /** vue attrs\props\events\class\style更新粒度放在了vNode 这个维度上， 通过前后两个vNode的attrs对比，决定待修改对象的增删改查 **
+      * 新\旧的vNode 是怎么来的?
+      * 更新的触发机制就要修改了
+      */
     attrs.forEach(function (attr, index) {
+      // 属性也分普通的属性 还有v-if v-show v-else v-else-if
+      // 大量的if else 要进行重构, 用策略模式重构
+      handleAttr(attr);
       if (attr.bindAttr) {
         var _render = 'with(this){return '+attr.value+'}'
+        /* 真正的vue Dep.target 实际上是一个watcher */
         Dep.target = {
           update: function () {
             _el.setAttribute(attr.name, new Function(_render).call(vm))
@@ -221,3 +231,17 @@ function renderFunc(vNode, vm, container) {
 }
 
 export {parse, renderFunc, render}
+
+function handAttr(attr) {
+  var handelObj = {
+    'v-if': function () {
+
+    },
+    'v-else': function () {
+
+    },
+    'v-else-if': function () {
+
+    }
+  }
+}
