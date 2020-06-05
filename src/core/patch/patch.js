@@ -49,8 +49,54 @@ function patchVnode(vNode, oldNode) {
   patchChildren(vNode, oldNode);
 }
 
+/**
+ * 对比子节点, 所以说要有key呢, 找到key相同的节点，patch执行的就是更新操作，如果没有key，执行的总是新增和插入操作，不是一个级别的代价的
+ * 新的有旧的没有 新增插入 新的旧的都有 更新 新的没有旧的有 删除 貌似就这三个点了吧
+ * 算法算法，在不考虑性能的情况下怎么都有法子完成这个更新的，作为一个框架，性能还是一个比较大的关注点
+ * @param vNode
+ * @param oldNode
+ */
 function patchChildren(vNode, oldNode) {
-
+  const oldChildren = oldNode.children;
+  const newChildren = vNode.children;
+  newChildren.forEach(function (child, index) {
+    // 最优结果，新旧不仅是同一个节点，位置还一样，那说啥， 直接更新撒
+    if (oldChildren[index] && child.key === oldChildren[index].key) {
+      patch(child, oldChildren[index])
+    }
+    // 只有新的有， 旧的没有， 说明是新加的
+    if (!oldChildren[index]) {
+      var _node = mountInit(child);
+      child.elm = _node
+      child.parentElm = vNode.elm
+      vNode.elm.appendChild(mountInit(child))
+    }
+    // 最优结果，新旧不仅是同一个节点，位置还一样，那说啥， 直接更新撒
+    if (oldChildren[index] && child.key === oldChildren[index].key) {
+      patch(child, oldChildren[index])
+    } else {
+      // 两边都tm有， 但是key不一样, 然后去旧的里面扒拉一下看旧的里面有没得
+      var oldNodeObj = searchNodeByKey(oldChildren, child.key);
+      if (oldNodeObj) {
+        // 旧的里面有，复用一下下
+        if (index == 0) {
+          vNode.elm.insertBefore(oldNodeObj.elm, newChildren[0].elm);
+        } else {
+          vNode.elm.insertAfter(oldNodeObj.elm, newChildren[index-1].elm)
+        }
+        patch(child, oldNodeObj)
+      } else {
+        // 旧的里面没有, 那自己新增撒
+        const _node = mountInit(child);
+        child.elm = _node
+        child.parentElm = vNode.elm
+        vNode.insertAfter(_node, newChildren[index - 1].elm)
+      }
+    }
+  })
+  function searchNodeByKey(nodes, key) {
+    return nodes.find(item => item.key === key)
+  }
 }
 
 // 将vNode映射至真实html中
@@ -58,15 +104,18 @@ function mountInit(vNode) {
   // 区分vNode 的type，根据type调用不同的生产方法
   const type = vNode.type;
   if (type === 'element') {
-    mountElement(vNode)
+    return mountElement(vNode)
   } else if (type === 'text') {
-    mountText(vNode)
+    return mountText(vNode)
   }
+
 }
 
 function mountText(vNode) {
   // 需要一个真实的dom引用去进行操作， 这个引用存哪里比较好呢? 先假定存当前的一个属性里面
-  vNode.parentElm.innerText = vNode.text
+  var _node = document.createTextNode(vNode.text)
+  vNode.parentElm.appendChild(_node)
+  return _node
 }
 
 function mountElement(vNode, vm) {
@@ -92,4 +141,5 @@ function mountElement(vNode, vm) {
     child.parentElm = _node;
     mountInit(child)
   })
+  return _node
 }
