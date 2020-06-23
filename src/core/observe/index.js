@@ -9,13 +9,14 @@ function defineReactive(obj, key, val) {
     enumerable: true,
     get: function () {
       if (Dep.target) {
+        // dep 里面收集的应该是watcher
         dep.addDep(Dep.target)
       }
       return val
     },
     set: function (newVal) {
       val = newVal
-      dep.update() // 触发更新
+      dep.notify() // 触发更新
     }
   })
 }

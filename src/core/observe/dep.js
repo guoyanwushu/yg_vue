@@ -3,10 +3,12 @@ class Dep {
     this.deps = []
   }
   addDep (target) {
-    this.deps.push(target)
+    if (!this.deps.find(target)) {
+      this.deps.push(target)
+    }
     Dep.target = null
   }
-  update () {
+  notify () {
     this.deps.forEach( _dep => {
       _dep.update()
     })

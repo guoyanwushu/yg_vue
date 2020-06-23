@@ -1,6 +1,9 @@
 let oldNode = null
+let vm = null
 /* patch阶段是最终形态的虚拟dom树对比了, 不存在v-if v-else v-for 这种东西的 这些指令什么的, 是在render阶段结合数据生效*/
-export function patch(vNode) {
+/* patch 中的vNode还是要区分一下状态吧, 有些是已经mount过了, 有些没有mount过，还有v-if切换那种，如果从false变为true，是不是又要重新mount一次 */
+export function patch(vNode, _vm) {
+  vm = _vm
   if (!oldNode) {
     // 没有oldnode，初次渲染
     mountInit(vNode);
@@ -10,21 +13,31 @@ export function patch(vNode) {
   if (sameNode(vNode, oldNode)) {
     // 开始patch
     patchVnode(vNode, oldNode)
-  } else {
 
+  } else {
+    // 有旧节点，但是新节点和旧节点不是同一个节点，然后说明旧的完全被新的替代，直接挂载新的就行了
+    vNode.parentElm?vNode.parentElm.removeChild(oldNode.elm): vm.$el.removeChild(oldNode.elm);
+    mountInit(vNode)
   }
 }
 function sameNode(vnode, oldnode) {
   return (
-    vnode.tagName === oldnode.tagName
+    vnode.tagName === oldnode.tagName &&
+    vnode.key === oldnode.key
   )
 }
 // 这里是节点和节点之间的比较，单对单的关系，不关系children的对比的， children有单独的对比法子.节点和节点之间应该就属性和事件有差异了吧
-function patchVnode(vNode, oldNode) {
+export function patchVnode(vNode, oldNode) {
   // 对比属性
-  const vm = vNode.context;
-  let oldAttrs = oldNode.data.attrs
-  let newAttrs = vNode.data.attrs
+  const vm = vNode.context; // 暂定用一个context属性来保存上下文
+  vNode.elm = oldNode.elm
+  vNode.parentElm = oldNode.parentElm
+  if (vNode.type == 'text') {
+    oldNode.parentElm.innerHTML = vNode.text;
+    return
+  }
+  let oldAttrs = (oldNode.data && oldNode.data.attrs) || {}
+  let newAttrs = (oldNode.data && vNode.data.attrs) || {}
   const keys = [...new Set([...Object.keys(oldAttrs), ...Object.keys(newAttrs)])]
   keys.forEach(function (attrName) {
     if (!newAttrs[attrName]) {
@@ -33,8 +46,8 @@ function patchVnode(vNode, oldNode) {
     vNode.elm.setAttribute(attrName, newAttrs[attrName])
   })
   // 对比事件
-  const oldEvents = oldNode.data.on;
-  const newEvents = vNode.data.on;
+  const oldEvents = (oldNode.data && oldNode.data.on) || {};
+  const newEvents = (vNode.data && oldNode.data.on) || {};
   const events = [...new Set([...Object.keys(oldEvents), ...Object.keys(newEvents)])];
   events.forEach(function (eventName) {
     if (!newEvents[eventName]) {
@@ -56,59 +69,21 @@ function patchVnode(vNode, oldNode) {
  * @param vNode
  * @param oldNode
  */
-function patchChildren(vNode, oldNode) {
-  const oldChildren = oldNode.children;
-  const newChildren = vNode.children;
-  newChildren.forEach(function (child, index) {
-    // 最优结果，新旧不仅是同一个节点，位置还一样，那说啥， 直接更新撒
-    if (oldChildren[index] && child.key === oldChildren[index].key) {
-      patch(child, oldChildren[index])
-    }
-    // 只有新的有， 旧的没有， 说明是新加的
-    if (!oldChildren[index]) {
-      var _node = mountInit(child);
-      child.elm = _node
-      child.parentElm = vNode.elm
-      vNode.elm.appendChild(mountInit(child))
-    }
-    // 最优结果，新旧不仅是同一个节点，位置还一样，那说啥， 直接更新撒
-    if (oldChildren[index] && child.key === oldChildren[index].key) {
-      patch(child, oldChildren[index])
-    } else {
-      // 两边都tm有， 但是key不一样, 然后去旧的里面扒拉一下看旧的里面有没得
-      var oldNodeObj = searchNodeByKey(oldChildren, child.key);
-      if (oldNodeObj) {
-        // 旧的里面有，复用一下下
-        if (index == 0) {
-          vNode.elm.insertBefore(oldNodeObj.elm, newChildren[0].elm);
-        } else {
-          vNode.elm.insertAfter(oldNodeObj.elm, newChildren[index-1].elm)
-        }
-        patch(child, oldNodeObj)
-      } else {
-        // 旧的里面没有, 那自己新增撒
-        const _node = mountInit(child);
-        child.elm = _node
-        child.parentElm = vNode.elm
-        vNode.insertAfter(_node, newChildren[index - 1].elm)
-      }
-    }
-  })
-  function searchNodeByKey(nodes, key) {
-    return nodes.find(item => item.key === key)
-  }
+export function patchChildren(vNode, oldNode) {
+  const oldChildren = oldNode.children || [];
+  const newChildren = vNode.children || [];
+  // TODO 子节点patch
 }
 
 // 将vNode映射至真实html中
-function mountInit(vNode) {
+export function mountInit(vNode) {
   // 区分vNode 的type，根据type调用不同的生产方法
   const type = vNode.type;
   if (type === 'element') {
-    return mountElement(vNode)
+    return mountElement(vNode, vm)
   } else if (type === 'text') {
     return mountText(vNode)
   }
-
 }
 
 function mountText(vNode) {
@@ -122,11 +97,11 @@ function mountElement(vNode, vm) {
   // 针对元素型节点, 其实就是创建一个元素, 然和绑上属性和事件就好了
   // 给vNode自己存一份真实dom引用, 同时存一份父级真实dom引用, 然和遍历子元素的时候, 给子元素存一份父级dom引用
   let _node = document.createElement(vNode.tagName);
-  const attrObj = vNode.data.attrs;
+  const attrObj = vNode.data.attrs || {};
   Object.keys(attrObj).forEach(function (attrName) {
     _node.setAttribute(attrName, attrObj[attrName])
   });
-  const eventsObj = vNode.data.on;
+  const eventsObj = vNode.data.on || {};
   Object.keys(eventsObj).forEach(function (eventName) {
     _node.addEventListener(eventName, vm[eventsObj[eventName]])
   })
@@ -139,7 +114,7 @@ function mountElement(vNode, vm) {
   const children = vNode.children;
   children.forEach(function (child) {
     child.parentElm = _node;
-    mountInit(child)
+    mountInit(child, vm)
   })
   return _node
 }
